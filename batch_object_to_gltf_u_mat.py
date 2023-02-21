@@ -1,5 +1,6 @@
 import os
 import bpy
+
 bl_info = {
     "name": "Super Mostache",
     "blender": (3, 4, 0),
@@ -9,12 +10,13 @@ bl_info = {
 }
 
 
+EXPORT_PATH = ""
+
+
 def remove_data_materials():
     for material in bpy.data.materials:
         material.user_clear()
         bpy.data.materials.remove(material)
-
-# func create all materials
 
 
 def assign_unique_mat():
@@ -25,7 +27,7 @@ def assign_unique_mat():
         obj.data.materials.append(material)
 
 
-def exports_objects_to_gltf():
+def export_objects_to(format):
     # export to blend file location
     basedir = os.path.dirname(bpy.data.filepath)
 
@@ -47,7 +49,15 @@ def exports_objects_to_gltf():
         view_layer.objects.active = obj
         name = bpy.path.clean_name(obj.name)
         fn = os.path.join(basedir, name)
-        bpy.ops.export_scene.gltf(filepath=fn + ".glb", use_selection=True)
+
+        match format:
+            case "gltf":
+                bpy.ops.export_scene.gltf(
+                    filepath=fn + ".glb", use_selection=True)
+            case "obj":
+                bpy.ops.export_scene.obj(
+                    filepath=fn + ".obj", use_selection=True)
+
         obj.select_set(False)
         print("written:", fn)
         obj.location = previous_location
@@ -58,16 +68,36 @@ def exports_objects_to_gltf():
         obj.select_set(True)
 
 
-class BatchObjectToGLTFWithUniqueMat(bpy.types.Operator):
-    """Batch Object-To-GLTF- with unique material"""
-    bl_idname = "object.batch_objects"        # Unique identifier for buttons and menu items to reference.
+class ExportGltf(bpy.types.Operator):
+    """Export to Gltf"""
+    bl_idname = "object.export_gltf"        # Unique identifier for buttons and menu items to reference.
     # Display name in the interface.
-    bl_label = "Objects -> Unique Mat -> Export GLTF"
+    bl_label = "Export to GLTF"
+
+    def execute(self, context):
+        export_objects_to("gltf")
+        return {'FINISHED'}
+
+
+class ExportObj(bpy.types.Operator):
+    """Export to Gltf"""
+    bl_idname = "object.export_obj"        # Unique identifier for buttons and menu items to reference.
+    # Display name in the interface.
+    bl_label = "Export to OBJ"
+
+    def execute(self, context):
+        export_objects_to("obj")
+        return {'FINISHED'}
+
+
+class UniqueMat(bpy.types.Operator):
+    """Assign unique mat"""
+    bl_idname = "object.uniquemat"
+    bl_label = "Set unique mat"
 
     def execute(self, context):
         remove_data_materials()
         assign_unique_mat()
-        exports_objects_to_gltf()
         return {'FINISHED'}
 
 
@@ -79,13 +109,19 @@ class SP_TOOL_PANEL(bpy.types.Panel):
     bl_category = 'Super Mostache'
 
     def draw(self, context):
-        self.layout.label(text='Object > U. Mat > Gltf')
-        self.layout.operator(
-            BatchObjectToGLTFWithUniqueMat.bl_idname, text='Unique Mat + Export')
+        self.layout.label(text='Assign unique mat')
+        self.layout.operator(UniqueMat.bl_idname, text='Unique Mat')
+        self.layout.separator()
+        self.layout.label(text='Export to Obj')
+        self.layout.operator(ExportObj.bl_idname, text='Export OBJ')
+        self.layout.label(text='Export to Gltf')
+        self.layout.operator(ExportGltf.bl_idname, text='Export GLTF')
 
 
 CLASSES = [
-    BatchObjectToGLTFWithUniqueMat,
+    UniqueMat,
+    ExportGltf,
+    ExportObj,
     SP_TOOL_PANEL,
 ]
 
